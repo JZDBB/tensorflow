@@ -33,16 +33,33 @@ def deep(x):
     # with tf.name_scope("reshape2"):
     #     part1, part2 = split(out_pool1, 224*224*48, [-1, 224, 224, 48])
 
-    with tf.name_scope("conv2"):
-        W_conv2 = weight_variable([5, 5, 96, 256])
-        b_conv2 = bias_variable(1., [256])
-        conv2 = tf.nn.conv2d(out_pool1, W_conv2, strides=[1, 1, 1, 1],
-                             padding="SAME") + b_conv2
-        out_conv2 = tf.nn.relu(conv2)
+    with tf.name_scope("split1"):
+        part1_1, part1_2 = tf.split(out_pool1, num_or_size_splits=2, axis=3)
 
-    with tf.name_scope("pool2"):
-        out_pool2 = tf.nn.max_pool(out_conv2, ksize=[1, 3, 3, 1],
+    with tf.name_scope("conv2-1"):
+        W_conv2_1 = weight_variable([5, 5, 48, 128])
+        b_conv2_1 = bias_variable(1., [128])
+        conv2_1 = tf.nn.conv2d(part1_1, W_conv2_1, strides=[1, 1, 1, 1],
+                             padding="SAME") + b_conv2_1
+        out_conv2_1 = tf.nn.relu(conv2_1)
+
+    with tf.name_scope("pool2-1"):
+        out_pool2_1 = tf.nn.max_pool(out_conv2_1, ksize=[1, 3, 3, 1],
                                    strides=[1, 2, 2, 1], padding="VALID")
+
+    with tf.name_scope("conv2-2"):
+        W_conv2_2 = weight_variable([5, 5, 48, 128])
+        b_conv2_2 = bias_variable(1., [128])
+        conv2_2 = tf.nn.conv2d(part1_2, W_conv2_2, strides=[1, 1, 1, 1],
+                             padding="SAME") + b_conv2_2
+        out_conv2_2 = tf.nn.relu(conv2_2)
+
+    with tf.name_scope("pool2-2"):
+        out_pool2_2 = tf.nn.max_pool(out_conv2_2, ksize=[1, 3, 3, 1],
+                                   strides=[1, 2, 2, 1], padding="VALID")
+
+    with tf.name_scope("merge"):
+        out_pool2 = tf.concat([out_pool2_1, out_pool2_2], 3)
 
     with tf.name_scope("conv3"):
         W_conv3 = weight_variable([3, 3, 256, 384])
@@ -51,23 +68,47 @@ def deep(x):
                              padding="SAME") + b_conv3
         out_conv3 = tf.nn.relu(conv3)
 
+    with tf.name_scope("split2"):
+        part2_1, part2_2 = tf.split(out_conv3, num_or_size_splits=2, axis=3)
+
     with tf.name_scope("conv4"):
-        W_conv4 = weight_variable([3, 3, 384, 384])
-        b_conv4 = bias_variable(1., [384])
-        conv4 = tf.nn.conv2d(out_conv3, W_conv4, strides=[1, 1, 1, 1],
-                             padding="SAME") + b_conv4
-        out_conv4 = tf.nn.relu(conv4)
+        W_conv4_1 = weight_variable([3, 3, 192, 192])
+        b_conv4_1 = bias_variable(1., [192])
+        W_conv4_2 = weight_variable([3, 3, 192, 192])
+        b_conv4_2 = bias_variable(1., [192])
+
+        with tf.name_scope("part1"):
+            conv4_1 = tf.nn.conv2d(part2_1, W_conv4_1, strides=[1, 1, 1, 1],
+                                 padding="SAME") + b_conv4_1
+            out_conv4_1 = tf.nn.relu(conv4_1)
+
+        with tf.name_scope("part2"):
+            conv4_2 = tf.nn.conv2d(part2_2, W_conv4_2, strides=[1, 1, 1, 1],
+                                   padding="SAME") + b_conv4_2
+            out_conv4_2 = tf.nn.relu(conv4_2)
 
     with tf.name_scope("conv5"):
-        W_conv5 = weight_variable([3, 3, 384, 256])
-        b_conv5 = bias_variable(1., [256])
-        conv5 = tf.nn.conv2d(out_conv4, W_conv5, strides=[1, 1, 1, 1],
-                             padding="SAME") + b_conv5
-        out_conv5 = tf.nn.relu(conv5)
+        W_conv5_1 = weight_variable([3, 3, 192, 128])
+        b_conv5_1 = bias_variable(1., [128])
+        W_conv5_2 = weight_variable([3, 3, 192, 128])
+        b_conv5_2 = bias_variable(1., [128])
+
+        with tf.name_scope("part1"):
+            conv5_1 = tf.nn.conv2d(out_conv4_1, W_conv5_1, strides=[1, 1, 1, 1],
+                                 padding="SAME") + b_conv5_1
+            out_conv5_1 = tf.nn.relu(conv5_1)
+
+        with tf.name_scope("part2"):
+            conv5_2 = tf.nn.conv2d(out_conv4_2, W_conv5_2, strides=[1, 1, 1, 1],
+                                 padding="SAME") + b_conv5_2
+            out_conv5_2 = tf.nn.relu(conv5_2)
+
+    with tf.name_scope("merge"):
+        out_conv5 = tf.concat([out_conv5_1, out_conv5_2], 3)
 
     with tf.name_scope("pool5"):
         out_pool5 = tf.nn.max_pool(out_conv5, ksize=[1, 3, 3, 1],
-                                   strides=[1, 2, 2, 1], padding="VALID")
+                                   strides=[1, 2, 2, 1], padding="SAME")
 
     with tf.name_scope("fc1"):
         W_fc1 = weight_variable([7*7*256, 4096])
