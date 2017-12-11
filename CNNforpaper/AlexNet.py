@@ -125,7 +125,7 @@ def deep(x):
         b_fc2 = bias_variable(1., [4096])
         out_fc2 = tf.nn.relu(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
-    with tf.name_scope("dropout1"):
+    with tf.name_scope("dropout2"):
         # keep_prob = tf.placeholder(tf.float32)
         h_fc2_drop = tf.nn.dropout(out_fc2, 0.5)
 
@@ -144,10 +144,17 @@ def main():
 
     with tf.name_scope('loss'):
         cross_entropy = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_pred))
+            tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=y_pred))
+        # important!!!
+        # different of sparse_softmax_cross_entropy_with_logits and
+        #              softmax_cross_entropy_with_logits
 
     with tf.name_scope('optimize'):
-        train_step = tf.train.MomentumOptimizer(1e-2, 0.9).minimize(cross_entropy)
+        # tips~~~
+        #change learning rate according to training times
+        global_step = tf.Variable(0, trainable=False)
+        lr = tf.train.piecewise_constant(global_step, [1000, 2000], [0.01, 0.001, 0.0001])
+        train_step = tf.train.MomentumOptimizer(lr, 0.9).minimize(cross_entropy)
 
     with tf.name_scope('accuracy'):
         correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y, 1))
