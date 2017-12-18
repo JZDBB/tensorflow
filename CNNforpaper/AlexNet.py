@@ -8,12 +8,12 @@ def bias_variable(x, shape):
     initial = tf.constant(x, shape=shape)
     return tf.Variable(initial)
 
-def split(x, size, shape):
-    x_reshape = tf.reshape(x, [-1, size*2])
-    output = tf.dynamic_partition(x_reshape, size+1, 2)
-    part1 = tf.reshape(output[0], shape)
-    part2 = tf.reshape(output[1], shape)
-    return part1, part2
+# def split(x, size, shape):
+#     x_reshape = tf.reshape(x, [-1, size*2])
+#     output = tf.dynamic_partition(x_reshape, size+1, 2)
+#     part1 = tf.reshape(output[0], shape)
+#     part2 = tf.reshape(output[1], shape)
+#     return part1, part2
 
 def deep(x):
     with tf.name_scope("reshape1"):
@@ -138,16 +138,19 @@ def deep(x):
 
 def main():
     x = tf.placeholder(tf.float32, [None, 224*224*3], name='input_image')
-    y = tf.placeholder(tf.float32, [None, 1000], name='label')
+    y = tf.placeholder(tf.int32, [None], name='label')
 
     y_pred = deep(x)
+
+    print(y.shape, y_pred.shape)
 
     with tf.name_scope('loss'):
         cross_entropy = tf.reduce_mean(
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=y_pred))
         # important!!!
-        # different of sparse_softmax_cross_entropy_with_logits and
-        #              softmax_cross_entropy_with_logits
+        # difference
+        # sparse_softmax_cross_entropy_with_logits(do not need onehot encoding) and
+        # softmax_cross_entropy_with_logits(need preprocess use onehot encoding)
 
     with tf.name_scope('optimize'):
         # tips~~~
@@ -166,16 +169,6 @@ def main():
         writer.close()
         # sess.run(tf.global_variables_initializer())
 
-        # for i in range(20000):
-        #     batch = mnist.train.next_batch(100)
-        #     if i % 100 == 0:
-        #         train_accuracy = accuracy.eval(feed_dict={
-        #           x: batch[0], y_: batch[1], keep_prob: 1.0})
-        #         print('step %d, training accuracy %g' % (i, train_accuracy))
-        #         train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
-        #
-        # print('test accuracy %g' % accuracy.eval(feed_dict={
-        #   x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
 
 if __name__ == "__main__":
     main()
