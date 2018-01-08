@@ -77,6 +77,7 @@ FLAGS = None
 def main(_):
     #import data
     mnist = input_data.read_data_sets('./data', one_hot=True)
+    print(mnist)
 
     x = tf.placeholder(tf.float32, [None, 784], name='input_image')
     y_ = tf.placeholder(tf.float32, [None, 10], name='true_label')

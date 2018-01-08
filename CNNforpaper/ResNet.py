@@ -1,7 +1,14 @@
 import tensorflow as tf
-import numpy as np
 from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.training import moving_averages
+
+BN_DECAY = 0.9
+
+def unpickle(file):
+    import pickle
+    with open(file, 'rb') as fo:
+        dict = pickle.load(fo, encoding='bytes')
+    return dict
 
 def weight_variable(shape):
   initial = tf.random_normal(shape, stddev=0.01)
@@ -12,6 +19,7 @@ def bias_variable(x, shape):
     return tf.Variable(initial)
 
 def batch_norm(x, is_training):
+    global BN_DECAY
     x_shape = x.get_shape()
     params_shape = x_shape[-1:]
 
@@ -28,8 +36,8 @@ def batch_norm(x, is_training):
     mean, variance = tf.nn.moments(x, axis)
     update_moving_mean = moving_averages.assign_moving_average(moving_mean, mean, BN_DECAY)
     update_moving_variance = moving_averages.assign_moving_average(moving_variance, variance, BN_DECAY)
-    tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_mean)
-    tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_variance)
+    tf.add_to_collection('store_mean', update_moving_mean)
+    tf.add_to_collection('store_variance', update_moving_variance)
 
     mean, variance = control_flow_ops.cond(
         is_training, lambda: (mean, variance),
@@ -41,14 +49,14 @@ def conv(x, Weight_shape, bias_val, bias_shape, stride):
     W_conv = weight_variable(Weight_shape)
     b_conv = bias_variable(bias_val, bias_shape)
     out_conv = tf.nn.conv2d(x, W_conv, strides=stride, padding="SAME") + b_conv
-    out_BN = batch_norm(out_conv)
+    out_BN = batch_norm(out_conv, is_training=True)
     return out_BN
 
 def max_pool_2x2(x):
   return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
                         strides=[1, 2, 2, 1], padding='SAME')
 
-def deep(x):
+def deep(x, is_training):
     with tf.name_scope("reshape"):
         x_orig = tf.reshape(x, [-1, 32, 32, 3])
 
@@ -58,7 +66,7 @@ def deep(x):
             b_preconv = bias_variable(0., [16])
             preconv = tf.nn.conv2d(x_orig, W_preconv, strides=[1, 1, 1, 1],
                                    padding="SAME") + b_preconv
-            preBN = batch_norm(preconv)
+            preBN = batch_norm(preconv, is_training)
 
         out_preconv = tf.nn.relu(preBN)
 
@@ -68,7 +76,7 @@ def deep(x):
             b_conv1 = bias_variable(0., [16])
             conv1 = tf.nn.conv2d(out_preconv, W_conv1, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv1
-            BN1 = batch_norm(conv1)
+            BN1 = batch_norm(conv1, is_training)
 
         out_conv1 = tf.nn.relu(BN1)
 
@@ -77,7 +85,7 @@ def deep(x):
             b_conv2 = bias_variable(0., [16])
             conv2 = tf.nn.conv2d(out_conv1, W_conv2, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv2
-            BN2 = batch_norm(conv2)
+            BN2 = batch_norm(conv2, is_training)
 
         out_conv2 = tf.add(BN2, out_preconv)
         out_block1_16 = tf.nn.relu(out_conv2)
@@ -88,7 +96,7 @@ def deep(x):
             b_conv3 = bias_variable(0., [16])
             conv3 = tf.nn.conv2d(out_block1_16, W_conv3, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv3
-            BN3 = batch_norm(conv3)
+            BN3 = batch_norm(conv3, is_training)
 
         out_conv3 = tf.nn.relu(BN3)
 
@@ -97,7 +105,7 @@ def deep(x):
             b_conv4 = bias_variable(0., [16])
             conv4 = tf.nn.conv2d(out_conv3, W_conv4, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv4
-            BN4 = batch_norm(conv4)
+            BN4 = batch_norm(conv4, is_training)
 
         out_conv4 = tf.add(BN4, out_block1_16)
         out_block2_16 = tf.nn.relu(out_conv4)
@@ -108,7 +116,7 @@ def deep(x):
             b_conv5 = bias_variable(0., [16])
             conv5 = tf.nn.conv2d(out_block2_16, W_conv5, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv5
-            BN5 = batch_norm(conv5)
+            BN5 = batch_norm(conv5, is_training)
 
         out_conv5 = tf.nn.relu(BN5)
 
@@ -117,7 +125,7 @@ def deep(x):
             b_conv6 = bias_variable(0., [16])
             conv6 = tf.nn.conv2d(out_conv5, W_conv6, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv6
-            BN6 = batch_norm(conv6)
+            BN6 = batch_norm(conv6, is_training)
 
         out_conv6 = tf.add(BN6, out_block2_16)
         out_block3_16 = tf.nn.relu(out_conv6)
@@ -128,7 +136,7 @@ def deep(x):
             b_conv32_1 = bias_variable(0., [32])
             conv32_1 = tf.nn.conv2d(out_block3_16, W_conv32_1, strides=[1, 2, 2, 1],
                                  padding="SAME") + b_conv32_1
-            BN32_1 = batch_norm(conv32_1)
+            BN32_1 = batch_norm(conv32_1, is_training)
 
         out_conv32_1 = tf.nn.relu(BN32_1)
 
@@ -137,14 +145,14 @@ def deep(x):
             b_conv32_2 = bias_variable(0., [32])
             conv32_2 = tf.nn.conv2d(out_conv32_1, W_conv32_2, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv32_2
-            BN32_2 = batch_norm(conv32_2)
+            BN32_2 = batch_norm(conv32_2, is_training)
 
         with tf.name_scope("shortcut1"):
             W_SC1 = weight_variable([1, 1, 16, 32])
             b_SC1 = bias_variable(0., [32])
             conv_SC1 = tf.nn.conv2d(out_block3_16, W_SC1, strides=[1, 2, 2, 1],
                                     padding="SAME") + b_SC1
-            out_SC1 = batch_norm(conv_SC1)
+            out_SC1 = batch_norm(conv_SC1, is_training)
 
         out_conv32_2 = tf.add(BN32_2, out_SC1)
         out_block1_32 = tf.nn.relu(out_conv32_2)
@@ -155,7 +163,7 @@ def deep(x):
             b_conv32_3 = bias_variable(0., [32])
             conv32_3 = tf.nn.conv2d(out_block1_32, W_conv32_3, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv32_3
-            BN32_3 = batch_norm(conv32_3)
+            BN32_3 = batch_norm(conv32_3, is_training)
 
         out_conv32_3 = tf.nn.relu(BN32_3)
 
@@ -164,7 +172,7 @@ def deep(x):
             b_conv32_4 = bias_variable(0., [32])
             conv32_4 = tf.nn.conv2d(out_conv32_3, W_conv32_4, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv32_4
-            BN32_4 = batch_norm(conv32_4)
+            BN32_4 = batch_norm(conv32_4, is_training)
 
         out_conv32_4 = tf.add(BN32_4, out_block1_32)
         out_block2_32 = tf.nn.relu(out_conv32_4)
@@ -176,7 +184,7 @@ def deep(x):
             b_conv32_5 = bias_variable(0., [32])
             conv32_5 = tf.nn.conv2d(out_block2_32, W_conv32_5, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv32_5
-            BN32_5 = batch_norm(conv32_5)
+            BN32_5 = batch_norm(conv32_5, is_training)
 
         out_conv32_5 = tf.nn.relu(BN32_5)
 
@@ -185,7 +193,7 @@ def deep(x):
             b_conv32_6 = bias_variable(0., [32])
             conv32_6 = tf.nn.conv2d(out_conv32_5, W_conv32_6, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv32_6
-            BN32_6 = batch_norm(conv32_6)
+            BN32_6 = batch_norm(conv32_6, is_training)
 
         out_conv32_6 = tf.add(BN32_6, out_block2_32)
         out_block3_32 = tf.nn.relu(out_conv32_6)
@@ -196,7 +204,7 @@ def deep(x):
             b_conv64_1 = bias_variable(0., [64])
             conv64_1 = tf.nn.conv2d(out_block3_32, W_conv64_1, strides=[1, 2, 2, 1],
                                  padding="SAME") + b_conv64_1
-            BN64_1 = batch_norm(conv64_1)
+            BN64_1 = batch_norm(conv64_1, is_training)
 
         out_conv64_1 = tf.nn.relu(BN64_1)
 
@@ -205,14 +213,14 @@ def deep(x):
             b_conv64_2 = bias_variable(0., [64])
             conv64_2 = tf.nn.conv2d(out_conv64_1, W_conv64_2, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv64_2
-            BN64_2 = batch_norm(conv64_2)
+            BN64_2 = batch_norm(conv64_2, is_training)
 
         with tf.name_scope("shortcut2"):
             W_SC2 = weight_variable([1, 1, 32, 64])
             b_SC2 = bias_variable(0., [64])
             conv_SC2 = tf.nn.conv2d(out_block3_32, W_SC2, strides=[1, 2, 2, 1],
                                     padding="SAME") + b_SC2
-            out_SC2 = batch_norm(conv_SC2)
+            out_SC2 = batch_norm(conv_SC2, is_training)
 
         out_conv64_2 = tf.add(BN64_2, out_SC2)
         out_block1_64 = tf.nn.relu(out_conv64_2)
@@ -223,7 +231,7 @@ def deep(x):
             b_conv64_3 = bias_variable(0., [64])
             conv64_3 = tf.nn.conv2d(out_block1_64, W_conv64_3, strides=[1, 1, 1, 1],
                                     padding="SAME") + b_conv64_3
-            BN64_3 = batch_norm(conv64_3)
+            BN64_3 = batch_norm(conv64_3, is_training)
 
         out_conv64_3 = tf.nn.relu(BN64_3)
 
@@ -232,7 +240,7 @@ def deep(x):
             b_conv64_4 = bias_variable(0., [64])
             conv64_4 = tf.nn.conv2d(out_conv64_3, W_conv64_4, strides=[1, 1, 1, 1],
                                     padding="SAME") + b_conv64_4
-            BN64_4 = batch_norm(conv64_4)
+            BN64_4 = batch_norm(conv64_4, is_training)
 
         out_conv64_4 = tf.add(BN64_4, out_block1_64)
         out_block2_64 = tf.nn.relu(out_conv64_4)
@@ -243,7 +251,7 @@ def deep(x):
             b_conv64_5 = bias_variable(0., [64])
             conv64_5 = tf.nn.conv2d(out_block2_64, W_conv64_5, strides=[1, 1, 1, 1],
                                     padding="SAME") + b_conv64_5
-            BN64_5 = batch_norm(conv64_5)
+            BN64_5 = batch_norm(conv64_5, is_training)
 
         out_conv64_5 = tf.nn.relu(BN64_5)
 
@@ -252,7 +260,7 @@ def deep(x):
             b_conv64_6 = bias_variable(0., [64])
             conv64_6 = tf.nn.conv2d(out_conv64_5, W_conv64_6, strides=[1, 1, 1, 1],
                                     padding="SAME") + b_conv64_6
-            BN64_6 = batch_norm(conv64_6)
+            BN64_6 = batch_norm(conv64_6, is_training)
 
         out_conv64_6 = tf.add(BN64_6, out_block2_64)
         out_block3_64 = tf.nn.relu(out_conv64_6)
@@ -269,10 +277,14 @@ def deep(x):
     return y_conv
 
 def main():
+    data_train = unpickle('cifar-10-python\data_batch_1')
+    data_test = unpickle('cifar-10-python\\test_batch')
+    is_train = True
+
     x = tf.placeholder(tf.float32, [None, 32*32*3], name='input_image')
     y = tf.placeholder(tf.int32, [None], name='label')
 
-    y_pred = deep(x)
+    y_pred = deep(x, is_train)
 
     with tf.name_scope('loss'):
         cross_entropy = tf.reduce_mean(
@@ -291,8 +303,18 @@ def main():
         writer = tf.summary.FileWriter("./logs", sess.graph)
         writer.flush()
         writer.close()
-        # sess.run(tf.global_variables_initializer())
+        sess.run(tf.global_variables_initializer())
 
+        for i in range(20000):
+            batch = mnist.train.next_batch(100)
+            if i % 100 == 0:
+                train_accuracy = accuracy.eval(feed_dict={
+                  x: batch[0], y_: batch[1], keep_prob: 1.0})
+                print('step %d, training accuracy %g' % (i, train_accuracy))
+                train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
+
+        print('test accuracy %g' % accuracy.eval(feed_dict={
+          x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
 
 if __name__ == "__main__":
     main()
