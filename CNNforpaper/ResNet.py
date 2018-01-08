@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.training import moving_averages
+import numpy as np
 
 BN_DECAY = 0.9
 
@@ -9,6 +10,32 @@ def unpickle(file):
     with open(file, 'rb') as fo:
         dict = pickle.load(fo, encoding='bytes')
     return dict
+
+def read_data():
+    dict_train = unpickle('cifar-10-python\data_batch_1')
+    train_data = dict_train[b'data']
+    train_labels = dict_train[b'labels']
+    dict_train = unpickle('cifar-10-python\data_batch_2')
+    train_data = np.append(train_data, dict_train[b'data'], axis=0)
+    train_labels.extend(dict_train[b'labels'])
+    dict_train = unpickle('cifar-10-python\data_batch_3')
+    train_data = np.append(train_data, dict_train[b'data'], axis=0)
+    train_labels.extend(dict_train[b'labels'])
+    dict_train = unpickle('cifar-10-python\data_batch_4')
+    train_data = np.append(train_data, dict_train[b'data'], axis=0)
+    train_labels.extend(dict_train[b'labels'])
+    dict_train = unpickle('cifar-10-python\data_batch_5')
+    train_data = np.append(train_data, dict_train[b'data'], axis=0)
+    train_labels.extend(dict_train[b'labels'])
+    dict_test = unpickle('cifar-10-python\\test_batch')
+    test_data = dict_test[b'data']
+    test_labels = dict_test[b'labels']
+    train_data = np.reshape(train_data, [-1, 32, 32, 3], 'F')
+    train_data = np.transpose(train_data, [0, 2, 1, 3])
+    test_data = np.reshape(test_data, [-1, 32, 32, 3], 'F')
+    test_data = np.transpose(test_data, [0, 2, 1, 3])
+    return train_data, train_labels, test_data, test_labels
+
 
 def weight_variable(shape):
   initial = tf.random_normal(shape, stddev=0.01)
@@ -57,14 +84,14 @@ def max_pool_2x2(x):
                         strides=[1, 2, 2, 1], padding='SAME')
 
 def deep(x, is_training):
-    with tf.name_scope("reshape"):
-        x_orig = tf.reshape(x, [-1, 32, 32, 3])
+    # with tf.name_scope("reshape"):
+    #     x_orig = tf.reshape(x, [-1, 32, 32, 3])
 
     with tf.name_scope("pre_conv"):
         with tf.name_scope("conv"):
             W_preconv = weight_variable([3, 3, 3, 16])
             b_preconv = bias_variable(0., [16])
-            preconv = tf.nn.conv2d(x_orig, W_preconv, strides=[1, 1, 1, 1],
+            preconv = tf.nn.conv2d(x, W_preconv, strides=[1, 1, 1, 1],
                                    padding="SAME") + b_preconv
             preBN = batch_norm(preconv, is_training)
 
@@ -277,8 +304,7 @@ def deep(x, is_training):
     return y_conv
 
 def main():
-    data_train = unpickle('cifar-10-python\data_batch_1')
-    data_test = unpickle('cifar-10-python\\test_batch')
+    train_data, train_labels, test_data, test_labels = read_data()
     is_train = True
 
     x = tf.placeholder(tf.float32, [None, 32*32*3], name='input_image')
@@ -305,16 +331,16 @@ def main():
         writer.close()
         sess.run(tf.global_variables_initializer())
 
-        for i in range(20000):
-            batch = mnist.train.next_batch(100)
-            if i % 100 == 0:
-                train_accuracy = accuracy.eval(feed_dict={
-                  x: batch[0], y_: batch[1], keep_prob: 1.0})
-                print('step %d, training accuracy %g' % (i, train_accuracy))
-                train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
-
-        print('test accuracy %g' % accuracy.eval(feed_dict={
-          x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
+        # for i in range(20000):
+        #     batch = mnist.train.next_batch(100)
+        #     if i % 100 == 0:
+        #         train_accuracy = accuracy.eval(feed_dict={
+        #           x: batch[0], y_: batch[1], keep_prob: 1.0})
+        #         print('step %d, training accuracy %g' % (i, train_accuracy))
+        #         train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
+        #
+        # print('test accuracy %g' % accuracy.eval(feed_dict={
+        #   x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
 
 if __name__ == "__main__":
     main()
