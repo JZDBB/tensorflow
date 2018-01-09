@@ -1,6 +1,4 @@
-import os
 import tensorflow as tf
-from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -38,20 +36,20 @@ def read_data():
 classes={'iris','contact'}
 train_data, train_labels, test_data, test_labels = read_data()
 
-# writer= tf.python_io.TFRecordWriter("traindata.tfrecords")
-# for i in range(50000):
-#     img= train_data[i]
-#     # img= img.resize((32, 32))
-#     img_raw=img.tobytes()
-#     # plt.imshow(img)
-#     # plt.show()
-#     example = tf.train.Example(features=tf.train.Features(feature={
-#         "label": tf.train.Feature(int64_list=tf.train.Int64List(value=[train_labels[i]])),
-#         'img_raw': tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
-#     }))
-#     writer.write(example.SerializeToString())
-#
-# writer.close()
+writer= tf.python_io.TFRecordWriter("traindata.tfrecords")
+for i in range(50000):
+    img= train_data[i]
+    # img= img.resize((32, 32))
+    img_raw=img.tobytes()
+    # plt.imshow(img)
+    # plt.show()
+    example = tf.train.Example(features=tf.train.Features(feature={
+        "label": tf.train.Feature(int64_list=tf.train.Int64List(value=[train_labels[i]])),
+        'img_raw': tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
+    }))
+    writer.write(example.SerializeToString())
+
+writer.close()
 
 writer= tf.python_io.TFRecordWriter("testdata.tfrecords")
 for i in range(10000):
