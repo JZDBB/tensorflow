@@ -1,6 +1,25 @@
+# TFrecords结构
+# message Example {
+#  Features features = 1;
+# };
+# message Features{
+#  map<string,Feature> featrue = 1;
+# };
+# message Feature{
+#     oneof kind{
+#         BytesList bytes_list = 1;
+#         FloatList float_list = 2;
+#         Int64List int64_list = 3;
+#     }};
+
+
+
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+
+Train_size = 50000
+Test_size = 10000
 
 def unpickle(file):
     import pickle
@@ -37,7 +56,7 @@ classes={'iris','contact'}
 train_data, train_labels, test_data, test_labels = read_data()
 
 writer= tf.python_io.TFRecordWriter("traindata.tfrecords")
-for i in range(50000):
+for i in range(Train_size):
     img= train_data[i]
     # img= img.resize((32, 32))
     img_raw=img.tobytes()
@@ -47,12 +66,17 @@ for i in range(50000):
         "label": tf.train.Feature(int64_list=tf.train.Int64List(value=[train_labels[i]])),
         'img_raw': tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
     }))
+    #主要的语句
+    # tf.train.Feature(int64_list=tf.train.Int64List(value=[int_scalar]))
+    # tf.train.Feature(bytes_list=tf.train.BytesList(value=[array_string_or_byte]))
+    # tf.train.Feature(bytes_list=tf.train.FloatList(value=[float_scalar]))
+
     writer.write(example.SerializeToString())
 
 writer.close()
 
 writer= tf.python_io.TFRecordWriter("testdata.tfrecords")
-for i in range(10000):
+for i in range(Test_size):
     img= test_data[i]
     # img= img.resize((32, 32))
     img_raw=img.tobytes()
