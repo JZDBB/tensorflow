@@ -1,3 +1,13 @@
+#some problems
+#1、average pooling strides and ksize and padding is not refered
+#2、weight initial I took std = sqrt(2./(weightsize)) is that right?
+#3、train method is still not understood =、= mini batch size is 128
+#4、bacth_norm with is_training is not understood yet
+#5、weight decay have not been solved. weight decay is 0.0001
+#6、how to split train data and validate data? 45k/5k ——tra/val
+#7、data augmentation needed.test use orignal image
+#8、change data to TFrecord
+
 import tensorflow as tf
 from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.training import moving_averages
@@ -304,7 +314,8 @@ def deep(x, is_training):
         out_block3_64 = tf.nn.relu(out_conv64_6)
 
     with tf.name_scope('pool'):
-        pooling = max_pool_2x2(out_block3_64)
+        pooling = tf.nn.avg_pool(out_block3_64, ksize=[1, 2, 2, 1],
+                        strides=[1, 2, 2, 1], padding='SAME')
 
     with tf.name_scope("fc"):
         W_fc = weight_variable([4 * 4 * 64, 10], math.sqrt(2./(4*4*64)))
