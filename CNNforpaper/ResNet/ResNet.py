@@ -1,12 +1,13 @@
 #some problems
 #1、average pooling strides and ksize and padding is not refered
 #2、weight initial I took std = sqrt(2./(weightsize)) is that right?
-#3、train method is still not understood =、= mini batch size is 128
+#3、train method is still not understood =、= mini batch size is 128（done）
 #4、bacth_norm with is_training is not understood yet
 #5、weight decay have not been solved. weight decay is 0.0001
-#6、how to split train data and validate data? 45k/5k ——tra/val
+#6、how to split train data and validate data? 45k/5k ——tra/val (不分)
 #7、data augmentation needed.test use orignal image
 #8、change data to TFrecord （done）
+#9、variable_scope和name_scope区别
 
 import tensorflow as tf
 from tensorflow.python.ops import control_flow_ops
@@ -45,6 +46,7 @@ def bias_variable(x, shape):
     return tf.Variable(initial)
 
 def batch_norm(x, is_training):
+    is_training = tf.convert_to_tensor(is_training)
     global BN_DECAY
     x_shape = x.get_shape()
     params_shape = x_shape[-1:]
@@ -69,7 +71,7 @@ def batch_norm(x, is_training):
         is_training, lambda: (mean, variance),
         lambda: (moving_mean, moving_variance))
 
-    return tf.nn.batch_normalization(x, mean, variance, beta, gamma, 'Batch_norm')
+    return tf.nn.batch_normalization(x, mean, variance, beta, gamma, 0.0001, 'Batch_norm')
 
 def conv(x, Weight_shape, bias_val, bias_shape, stride):
     W_conv = weight_variable(Weight_shape, math.sqrt(2.0))
@@ -86,8 +88,8 @@ def deep(x, is_training):
     # with tf.name_scope("reshape"):
     #     x_orig = tf.reshape(x, [-1, 32, 32, 3])
 
-    with tf.name_scope("pre_conv"):
-        with tf.name_scope("conv"):
+    with tf.variable_scope("pre_conv"):
+        with tf.variable_scope("conv"):
             W_preconv = weight_variable([3, 3, 3, 16], math.sqrt(2.0/(3*3*3)))
             b_preconv = bias_variable(0., [16])
             preconv = tf.nn.conv2d(x, W_preconv, strides=[1, 1, 1, 1],
@@ -96,8 +98,8 @@ def deep(x, is_training):
 
         out_preconv = tf.nn.relu(preBN)
 
-    with tf.name_scope("Block1_16"):
-        with tf.name_scope("conv1"):
+    with tf.variable_scope("Block1_16"):
+        with tf.variable_scope("conv1"):
             W_conv1 = weight_variable([3, 3, 16, 16], math.sqrt(2./(3*3*16)))
             b_conv1 = bias_variable(0., [16])
             conv1 = tf.nn.conv2d(out_preconv, W_conv1, strides=[1, 1, 1, 1],
@@ -106,7 +108,7 @@ def deep(x, is_training):
 
         out_conv1 = tf.nn.relu(BN1)
 
-        with tf.name_scope("conv2"):
+        with tf.variable_scope("conv2"):
             W_conv2 = weight_variable([3, 3, 16, 16], math.sqrt(2./(3*3*16)))
             b_conv2 = bias_variable(0., [16])
             conv2 = tf.nn.conv2d(out_conv1, W_conv2, strides=[1, 1, 1, 1],
@@ -116,8 +118,8 @@ def deep(x, is_training):
         out_conv2 = tf.add(BN2, out_preconv)
         out_block1_16 = tf.nn.relu(out_conv2)
 
-    with tf.name_scope("Block2_16"):
-        with tf.name_scope("conv3"):
+    with tf.variable_scope("Block2_16"):
+        with tf.variable_scope("conv3"):
             W_conv3 = weight_variable([3, 3, 16, 16], math.sqrt(2./(3*3*16)))
             b_conv3 = bias_variable(0., [16])
             conv3 = tf.nn.conv2d(out_block1_16, W_conv3, strides=[1, 1, 1, 1],
@@ -126,7 +128,7 @@ def deep(x, is_training):
 
         out_conv3 = tf.nn.relu(BN3)
 
-        with tf.name_scope("conv4"):
+        with tf.variable_scope("conv4"):
             W_conv4 = weight_variable([3, 3, 16, 16], math.sqrt(2./(3*3*16)))
             b_conv4 = bias_variable(0., [16])
             conv4 = tf.nn.conv2d(out_conv3, W_conv4, strides=[1, 1, 1, 1],
@@ -136,8 +138,8 @@ def deep(x, is_training):
         out_conv4 = tf.add(BN4, out_block1_16)
         out_block2_16 = tf.nn.relu(out_conv4)
 
-    with tf.name_scope("Block3_16"):
-        with tf.name_scope("conv5"):
+    with tf.variable_scope("Block3_16"):
+        with tf.variable_scope("conv5"):
             W_conv5 = weight_variable([3, 3, 16, 16], math.sqrt(2./(3*3*16)))
             b_conv5 = bias_variable(0., [16])
             conv5 = tf.nn.conv2d(out_block2_16, W_conv5, strides=[1, 1, 1, 1],
@@ -146,7 +148,7 @@ def deep(x, is_training):
 
         out_conv5 = tf.nn.relu(BN5)
 
-        with tf.name_scope("conv6"):
+        with tf.variable_scope("conv6"):
             W_conv6 = weight_variable([3, 3, 16, 16], math.sqrt(2./(3*3*16)))
             b_conv6 = bias_variable(0., [16])
             conv6 = tf.nn.conv2d(out_conv5, W_conv6, strides=[1, 1, 1, 1],
@@ -156,8 +158,8 @@ def deep(x, is_training):
         out_conv6 = tf.add(BN6, out_block2_16)
         out_block3_16 = tf.nn.relu(out_conv6)
 
-    with tf.name_scope("Block1_32"):
-        with tf.name_scope("conv32-1"):
+    with tf.variable_scope("Block1_32"):
+        with tf.variable_scope("conv32-1"):
             W_conv32_1 = weight_variable([3, 3, 16, 32], math.sqrt(2./(3*3*16)))
             b_conv32_1 = bias_variable(0., [32])
             conv32_1 = tf.nn.conv2d(out_block3_16, W_conv32_1, strides=[1, 2, 2, 1],
@@ -166,30 +168,32 @@ def deep(x, is_training):
 
         out_conv32_1 = tf.nn.relu(BN32_1)
 
-        with tf.name_scope("conv32-2"):
+        with tf.variable_scope("conv32-2"):
             W_conv32_2 = weight_variable([3, 3, 32, 32], math.sqrt(2./(3*3*32)))
             b_conv32_2 = bias_variable(0., [32])
             conv32_2 = tf.nn.conv2d(out_conv32_1, W_conv32_2, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv32_2
             BN32_2 = batch_norm(conv32_2, is_training)
 
-        with tf.name_scope("shortcut1"):
+        with tf.variable_scope("shortcut1"):
             #option B
-            # W_SC1 = weight_variable([1, 1, 16, 32], math.sqrt(2./(1*1*16)))
-            # b_SC1 = bias_variable(0., [32])
-            # conv_SC1 = tf.nn.conv2d(out_block3_16, W_SC1, strides=[1, 2, 2, 1],
-            #                         padding="SAME") + b_SC1
-            # out_SC1 = batch_norm(conv_SC1, is_training)
+            W_SC1 = weight_variable([1, 1, 16, 32], math.sqrt(2./(1*1*16)))
+            b_SC1 = bias_variable(0., [32])
+            conv_SC1 = tf.nn.conv2d(out_block3_16, W_SC1, strides=[1, 2, 2, 1],
+                                    padding="SAME") + b_SC1
+            out_SC1 = batch_norm(conv_SC1, is_training)
 
             #option A
-            padding_matrix = tf.zeros_like(out_block3_16, tf.float32,name=None)
-            out_SC1 = tf.concat([out_block3_16, padding_matrix], 3)
+            # one = tf.ones(shape=[1, 1, ], dtype=tf.float32)
+            # out = tf.nn.conv2d(out_block3_16, one, strides=[1, 2, 2, 1], padding="SAME")
+            # padding_matrix = tf.zeros_like(out, tf.float32,name=None)
+            # out_SC1 = tf.concat([out, padding_matrix], 3)
 
         out_conv32_2 = tf.add(BN32_2, out_SC1)
         out_block1_32 = tf.nn.relu(out_conv32_2)
 
-    with tf.name_scope("Block2_32"):
-        with tf.name_scope("conv32-3"):
+    with tf.variable_scope("Block2_32"):
+        with tf.variable_scope("conv32-3"):
             W_conv32_3 = weight_variable([3, 3, 32, 32], math.sqrt(2./(3*3*32)))
             b_conv32_3 = bias_variable(0., [32])
             conv32_3 = tf.nn.conv2d(out_block1_32, W_conv32_3, strides=[1, 1, 1, 1],
@@ -198,7 +202,7 @@ def deep(x, is_training):
 
         out_conv32_3 = tf.nn.relu(BN32_3)
 
-        with tf.name_scope("conv32-4"):
+        with tf.variable_scope("conv32-4"):
             W_conv32_4 = weight_variable([3, 3, 32, 32], math.sqrt(2./(3*3*32)))
             b_conv32_4 = bias_variable(0., [32])
             conv32_4 = tf.nn.conv2d(out_conv32_3, W_conv32_4, strides=[1, 1, 1, 1],
@@ -209,7 +213,7 @@ def deep(x, is_training):
         out_block2_32 = tf.nn.relu(out_conv32_4)
 
 
-    with tf.name_scope("Block3_32"):
+    with tf.variable_scope("Block3_32"):
         with tf.name_scope("conv32-5"):
             W_conv32_5 = weight_variable([3, 3, 32, 32], math.sqrt(2./(3*3*32)))
             b_conv32_5 = bias_variable(0., [32])
@@ -219,7 +223,7 @@ def deep(x, is_training):
 
         out_conv32_5 = tf.nn.relu(BN32_5)
 
-        with tf.name_scope("conv32-6"):
+        with tf.variable_scope("conv32-6"):
             W_conv32_6 = weight_variable([3, 3, 32, 32], math.sqrt(2./(3*3*32)))
             b_conv32_6 = bias_variable(0., [32])
             conv32_6 = tf.nn.conv2d(out_conv32_5, W_conv32_6, strides=[1, 1, 1, 1],
@@ -229,8 +233,8 @@ def deep(x, is_training):
         out_conv32_6 = tf.add(BN32_6, out_block2_32)
         out_block3_32 = tf.nn.relu(out_conv32_6)
 
-    with tf.name_scope("Block1_64"):
-        with tf.name_scope("conv64-1"):
+    with tf.variable_scope("Block1_64"):
+        with tf.variable_scope("conv64-1"):
             W_conv64_1 = weight_variable([3, 3, 32, 64], math.sqrt(2./(3*3*32)))
             b_conv64_1 = bias_variable(0., [64])
             conv64_1 = tf.nn.conv2d(out_block3_32, W_conv64_1, strides=[1, 2, 2, 1],
@@ -239,29 +243,29 @@ def deep(x, is_training):
 
         out_conv64_1 = tf.nn.relu(BN64_1)
 
-        with tf.name_scope("conv64-2"):
+        with tf.variable_scope("conv64-2"):
             W_conv64_2 = weight_variable([3, 3, 64, 64], math.sqrt(2./(3*3*32)))
             b_conv64_2 = bias_variable(0., [64])
             conv64_2 = tf.nn.conv2d(out_conv64_1, W_conv64_2, strides=[1, 1, 1, 1],
                                  padding="SAME") + b_conv64_2
             BN64_2 = batch_norm(conv64_2, is_training)
 
-        with tf.name_scope("shortcut2"):
+        with tf.variable_scope("shortcut2"):
             #option B
-            # W_SC2 = weight_variable([1, 1, 32, 64], math.sqrt(2./(1*1*32)))
-            # b_SC2 = bias_variable(0., [64])
-            # conv_SC2 = tf.nn.conv2d(out_block3_32, W_SC2, strides=[1, 2, 2, 1],
-            #                         padding="SAME") + b_SC2
-            # out_SC2 = batch_norm(conv_SC2, is_training)
+            W_SC2 = weight_variable([1, 1, 32, 64], math.sqrt(2./(1*1*32)))
+            b_SC2 = bias_variable(0., [64])
+            conv_SC2 = tf.nn.conv2d(out_block3_32, W_SC2, strides=[1, 2, 2, 1],
+                                    padding="SAME") + b_SC2
+            out_SC2 = batch_norm(conv_SC2, is_training)
 
             # option A
-            padding_matrix = tf.zeros_like(out_block3_32, tf.float32, name=None)
-            out_SC2 = tf.concat([out_block3_32, padding_matrix], 3)
+            # padding_matrix = tf.zeros_like(out_block3_32, tf.float32, name=None)
+            # out_SC2 = tf.concat([out_block3_32, padding_matrix], 3)
 
         out_conv64_2 = tf.add(BN64_2, out_SC2)
         out_block1_64 = tf.nn.relu(out_conv64_2)
 
-    with tf.name_scope("Block2_64"):
+    with tf.variable_scope("Block2_64"):
         with tf.name_scope("conv64-3"):
             W_conv64_3 = weight_variable([3, 3, 64, 64], math.sqrt(2./(3*3*64)))
             b_conv64_3 = bias_variable(0., [64])
@@ -271,7 +275,7 @@ def deep(x, is_training):
 
         out_conv64_3 = tf.nn.relu(BN64_3)
 
-        with tf.name_scope("conv64-4"):
+        with tf.variable_scope("conv64-4"):
             W_conv64_4 = weight_variable([3, 3, 64, 64], math.sqrt(2./(3*3*64)))
             b_conv64_4 = bias_variable(0., [64])
             conv64_4 = tf.nn.conv2d(out_conv64_3, W_conv64_4, strides=[1, 1, 1, 1],
@@ -281,8 +285,8 @@ def deep(x, is_training):
         out_conv64_4 = tf.add(BN64_4, out_block1_64)
         out_block2_64 = tf.nn.relu(out_conv64_4)
 
-    with tf.name_scope("Block3_64"):
-        with tf.name_scope("conv64-5"):
+    with tf.variable_scope("Block3_64"):
+        with tf.variable_scope("conv64-5"):
             W_conv64_5 = weight_variable([3, 3, 64, 64], math.sqrt(2./(3*3*64)))
             b_conv64_5 = bias_variable(0., [64])
             conv64_5 = tf.nn.conv2d(out_block2_64, W_conv64_5, strides=[1, 1, 1, 1],
@@ -291,7 +295,7 @@ def deep(x, is_training):
 
         out_conv64_5 = tf.nn.relu(BN64_5)
 
-        with tf.name_scope("conv64-6"):
+        with tf.variable_scope("conv64-6"):
             W_conv64_6 = weight_variable([3, 3, 64, 64], math.sqrt(2./(3*3*64)))
             b_conv64_6 = bias_variable(0., [64])
             conv64_6 = tf.nn.conv2d(out_conv64_5, W_conv64_6, strides=[1, 1, 1, 1],
@@ -301,14 +305,14 @@ def deep(x, is_training):
         out_conv64_6 = tf.add(BN64_6, out_block2_64)
         out_block3_64 = tf.nn.relu(out_conv64_6)
 
-    with tf.name_scope('pool'):
-        pooling = tf.nn.avg_pool(out_block3_64, ksize=[1, 2, 2, 1],
-                        strides=[1, 2, 2, 1], padding='SAME')
+    with tf.variable_scope('pool'):
+        pooling = tf.nn.avg_pool(out_block3_64, ksize=[1, 8, 8, 1],
+                        strides=[1, 2, 2, 1], padding='VALID')
 
-    with tf.name_scope("fc"):
-        W_fc = weight_variable([4 * 4 * 64, 10], math.sqrt(2./(4*4*64)))
+    with tf.variable_scope("fc"):
+        W_fc = weight_variable([64, 10], math.sqrt(2./(64)))
         b_fc = bias_variable(0., [10])
-        reshape = tf.reshape(pooling, [-1, 4 * 4 * 64])
+        reshape = tf.reshape(pooling, [-1, 64])
         y_conv = tf.matmul(reshape, W_fc) + b_fc
 
     return y_conv
@@ -320,7 +324,7 @@ def main():
     img_train, label_train = read_and_decode("traindata.tfrecords")
     img_test, label_test = read_and_decode("testdata.tfrecords")
 
-    x = tf.placeholder(tf.float32, [None, 32*32*3], name='input_image')
+    x = tf.placeholder(tf.float32, [None, 32, 32, 3], name='input_image')
     y = tf.placeholder(tf.int32, [None], name='label')
 
     y_pred = deep(x, is_train)
@@ -349,14 +353,15 @@ def main():
                                                             batch_size=128, capacity=50000,
                                                             min_after_dequeue=1000)
             if i % 100 == 0:
-                train_accuracy = accuracy.eval(img_batch_train, label_batch_train)
+                feed_dict = {x:y_pred for x, y_pred in zip(img_batch_train, label_batch_train)}
+                train_accuracy = accuracy.eval(feed_dict)
                 print('step %d, training accuracy %g' % (i, train_accuracy))
-                train_step.run(img_batch_train, label_batch_train)
+                train_step.run(feed_dict={x:y_pred for x, y_pred in zip(img_batch_train, label_batch_train)})
 
         img_batch_test, label_batch_test = tf.train.shuffle_batch([img_test, label_test],
                                                         batch_size=10000, capacity=10000,
                                                         min_after_dequeue=10000)
-        print('test accuracy %g' % accuracy.eval(img_batch_test, label_batch_test))
+        print('test accuracy %g' % accuracy.eval(feed_dict={x:y_pred for x, y_pred in zip(img_batch_test, label_batch_test)}))
 
 if __name__ == "__main__":
     main()
