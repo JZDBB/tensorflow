@@ -6,7 +6,7 @@
 #5、weight decay have not been solved. weight decay is 0.0001
 #6、how to split train data and validate data? 45k/5k ——tra/val
 #7、data augmentation needed.test use orignal image
-#8、change data to TFrecord
+#8、change data to TFrecord （done）
 
 import tensorflow as tf
 from tensorflow.python.ops import control_flow_ops
@@ -16,6 +16,25 @@ import math
 
 BN_DECAY = 0.9
 Weight_decay = 0.0001
+
+def read_and_decode(filename):
+    #根据文件名生成一个队列
+    filename_queue = tf.train.string_input_producer([filename])
+
+    reader = tf.TFRecordReader()
+    _, serialized_example = reader.read(filename_queue)   #返回文件名和文件
+    features = tf.parse_single_example(serialized_example,
+                                       features={
+                                           'label': tf.FixedLenFeature([], tf.int64),
+                                           'img_raw' : tf.FixedLenFeature([], tf.string),
+                                       })
+
+    img = tf.decode_raw(features['img_raw'], tf.uint8)
+    img = tf.reshape(img, [32, 32, 3])
+    img = tf.cast(img, tf.float32) * (1. / 255) - 0.5
+    label = tf.cast(features['label'], tf.int32)
+
+    return img, label
 
 def weight_variable(shape, std):
   initial = tf.random_normal(shape, stddev=std)
@@ -298,6 +317,9 @@ def main():
     global Weight_decay
     is_train = True
 
+    img_train, label_train = read_and_decode("traindata.tfrecords")
+    img_test, label_test = read_and_decode("testdata.tfrecords")
+
     x = tf.placeholder(tf.float32, [None, 32*32*3], name='input_image')
     y = tf.placeholder(tf.int32, [None], name='label')
 
@@ -322,17 +344,19 @@ def main():
         writer.flush()
         writer.close()
         sess.run(tf.global_variables_initializer())
+        for i in range(64000):
+            img_batch_train, label_batch_train = tf.train.shuffle_batch([img_train, label_train],
+                                                            batch_size=128, capacity=50000,
+                                                            min_after_dequeue=1000)
+            if i % 100 == 0:
+                train_accuracy = accuracy.eval(img_batch_train, label_batch_train)
+                print('step %d, training accuracy %g' % (i, train_accuracy))
+                train_step.run(img_batch_train, label_batch_train)
 
-        # for i in range(20000):
-        #     batch = mnist.train.next_batch(100)
-        #     if i % 100 == 0:
-        #         train_accuracy = accuracy.eval(feed_dict={
-        #           x: batch[0], y_: batch[1], keep_prob: 1.0})
-        #         print('step %d, training accuracy %g' % (i, train_accuracy))
-        #         train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
-        #
-        # print('test accuracy %g' % accuracy.eval(feed_dict={
-        #   x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
+        img_batch_test, label_batch_test = tf.train.shuffle_batch([img_test, label_test],
+                                                        batch_size=10000, capacity=10000,
+                                                        min_after_dequeue=10000)
+        print('test accuracy %g' % accuracy.eval(img_batch_test, label_batch_test))
 
 if __name__ == "__main__":
     main()
