@@ -374,13 +374,8 @@ def main():
         img_batch_test, label_batch_test = tf.train.shuffle_batch([img_test, label_test],
                                                                   batch_size=10000, capacity=10000,
                                                                   min_after_dequeue=10000)
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
         img_t, labels_t = sess.run([img_batch_test, label_batch_test])
         print('test accuracy %g' % accuracy.eval(feed_dict={x: img_t, y: labels_t}))
-        coord.request_stop()
-        coord.join(threads)
-
 
 if __name__ == "__main__":
     main()
