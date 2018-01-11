@@ -340,28 +340,47 @@ def main():
         train_step = tf.train.MomentumOptimizer(lr, 0.9).minimize(loss)
 
     with tf.name_scope('accuracy'):
-        correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y, 1))
+        correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.cast(y, tf.int64))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
+    img_batch_train, label_batch_train = tf.train.shuffle_batch([img_train, label_train],
+                                                                batch_size=128, capacity=50000,
+                                                                min_after_dequeue=1000)
+    img_batch_test, label_batch_test = tf.train.shuffle_batch([img_test, label_test],
+                                                              batch_size=200, capacity=10000,
+                                                              min_after_dequeue=10000)
     with tf.Session() as sess:
         writer = tf.summary.FileWriter("./logs", sess.graph)
         writer.flush()
         writer.close()
+
         sess.run(tf.global_variables_initializer())
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
         for i in range(64000):
-            img_batch_train, label_batch_train = tf.train.shuffle_batch([img_train, label_train],
-                                                            batch_size=128, capacity=50000,
-                                                            min_after_dequeue=1000)
+            img, labels = sess.run([img_batch_train, label_batch_train])
             if i % 100 == 0:
-                feed_dict = {x:y_pred for x, y_pred in zip(img_batch_train, label_batch_train)}
+                feed_dict = {x:img, y:labels}
                 train_accuracy = accuracy.eval(feed_dict)
                 print('step %d, training accuracy %g' % (i, train_accuracy))
-                train_step.run(feed_dict={x:y_pred for x, y_pred in zip(img_batch_train, label_batch_train)})
+                img_t, labels_t = sess.run([img_batch_test, label_batch_test])
+                feed_dict = {x: img_t, y: labels_t}
+                test_accuracy = accuracy.eval(feed_dict)
+                print('step %d, validation accuracy %g' % (i, test_accuracy))
+            train_step.run(feed_dict={x:img, y:labels})
+        coord.request_stop()
+        coord.join(threads)
 
         img_batch_test, label_batch_test = tf.train.shuffle_batch([img_test, label_test],
-                                                        batch_size=10000, capacity=10000,
-                                                        min_after_dequeue=10000)
-        print('test accuracy %g' % accuracy.eval(feed_dict={x:y_pred for x, y_pred in zip(img_batch_test, label_batch_test)}))
+                                                                  batch_size=10000, capacity=10000,
+                                                                  min_after_dequeue=10000)
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
+        img_t, labels_t = sess.run([img_batch_test, label_batch_test])
+        print('test accuracy %g' % accuracy.eval(feed_dict={x: img_t, y: labels_t}))
+        coord.request_stop()
+        coord.join(threads)
+
 
 if __name__ == "__main__":
     main()
