@@ -374,7 +374,7 @@ def main():
                 test_accuracy = accuracy.eval(feed_dict)
                 print('step %d, training accuracy %g , validation accuracy %g' % (i, train_accuracy, test_accuracy))
             train_step.run(feed_dict={x:img, y:labels, is_training:True})
-            sess.run(list_add)
+            sess.run(list_add, feed_dict={x:img, is_training:True})
         coord.request_stop()
         coord.join(threads)
 
