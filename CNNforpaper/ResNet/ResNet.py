@@ -16,6 +16,7 @@ from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.training import moving_averages
 import numpy as np
 import math
+import os
 import matplotlib.pyplot as plt
 
 BN_DECAY = 0.9
@@ -43,6 +44,41 @@ def read_and_decode(filename, train):
     label = tf.cast(features['label'], tf.int32)
 
     return img, label
+
+def unpickle(file):
+    import pickle
+    with open(file, 'rb') as fo:
+        dict = pickle.load(fo, encoding='bytes')
+    return dict
+
+
+def load_train_data():
+    data = np.ndarray(shape=(0, 32 * 32 * 3), dtype=np.float32)
+    labels = np.ndarray(shape=0, dtype=np.int64)
+    for i in range(5):
+        tmp = unpickle(os.path.join("cifar-10-python", "data_batch_{}".format(i + 1)))
+        data = np.append(data, tmp[b'data'], axis=0)
+        labels = np.append(labels, tmp[b'labels'], axis=0)
+        print('load training data: data_batch_{}'.format(i + 1))
+    data = np.reshape(data, [-1, 32, 32, 3], 'F').transpose((0, 2, 1, 3))
+    return data, labels
+
+
+def load_valid_data():
+    tmp = unpickle(os.path.join("cifar-10-python", "test_batch"))
+    data = np.ndarray(shape=(0, 32 * 32 * 3), dtype=np.float32)
+    labels = np.ndarray(shape=0, dtype=np.int64)
+
+    data = np.append(data, tmp[b'data'], axis=0)
+    # data = tmp[b'data']
+    labels = np.append(labels, tmp[b'labels'])
+
+    # data.astype(np.float32)
+    # labels.astype(np.int64)
+
+    data = np.reshape(data, [-1, 32, 32, 3], 'F').transpose((0, 2, 1, 3))
+    print('load test data: test_batch')
+    return data, labels
 
 def weight_variable(shape, std):
   initial = tf.random_normal(shape, stddev=std)
@@ -343,8 +379,12 @@ def main():
     global Weight_decay
     is_train = True
 
-    img_train, label_train = read_and_decode("traindata.tfrecords", True)
-    img_test, label_test = read_and_decode("testdata.tfrecords", False)
+    # img_train, label_train = read_and_decode("traindata.tfrecords", True)
+    # img_test, label_test = read_and_decode("testdata.tfrecords", False)
+    img_train, label_train = load_train_data()
+    img_test, label_test = load_valid_data()
+    img_train = (img_train - 128) / 128.0
+    img_test = (img_test - 128) / 128.0
 
     x = tf.placeholder(tf.float32, [None, 32, 32, 3], name='input_image')
 
@@ -376,12 +416,38 @@ def main():
         correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.cast(y, tf.int64))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    img_batch_train, label_batch_train = tf.train.shuffle_batch([img_train, label_train],
-                                                                batch_size=128, capacity=50000,
-                                                                min_after_dequeue=1000)
-    img_batch_test, label_batch_test = tf.train.shuffle_batch([img_test, label_test],
-                                                              batch_size=200, capacity=20000,
-                                                              min_after_dequeue=10000)
+    # img_batch_train, label_batch_train = tf.train.shuffle_batch([img_train, label_train],
+    #                                                             batch_size=128, capacity=50000,
+    #                                                             min_after_dequeue=1000)
+    # img_batch_test, label_batch_test = tf.train.shuffle_batch([img_test, label_test],
+    #                                                           batch_size=200, capacity=20000,
+    #                                                           min_after_dequeue=10000)
+
+    def feed_dict(train, kk=1.0):
+        """Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
+
+        def get_batch(data, labels):
+            id = np.random.randint(low=0, high=labels.shape[0], size=128, dtype=np.int32)
+            return data[id, ...], labels[id]
+
+        if train:
+            tmp, ys = get_batch(img_train, label_train)
+            xs = tmp
+            tmp = np.pad(tmp, 4, 'constant')
+            for ii in range(128):
+                xx = np.random.randint(0, 9)
+                yy = np.random.randint(0, 9)
+                xs[ii, :] = np.fliplr(tmp[ii + 4, xx:xx + 32, yy:yy + 32, 4:7]) if np.random.randint(0, 2) == 1 \
+                    else tmp[ii + 4, xx:xx + 32, yy:yy + 32, 4:7]
+            k = kk
+        else:
+            # xs, ys = get_batch(valid_data, valid_labels)
+            xs = img_test
+            ys = label_test
+            k = 1.0
+        return {x: xs, y: ys, is_training: train}
+
+
     store_mean = tf.get_collection('store_mean')
     store_variance = tf.get_collection('store_variance')
     list_add = store_mean + store_variance
@@ -395,19 +461,20 @@ def main():
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         for i in range(64000):
-            img, labels = sess.run([img_batch_train, label_batch_train])
+            # img, labels = sess.run([img_batch_train, label_batch_train])
             # for i in range(128):
             #     a = (img[i, :]*255+128).astype(np.uint8)
             #     plt.imshow(a)
             #     plt.show()
             if i % 100 == 0:
-                feed_dict = {x: img, y: labels, is_training: False}
-                train_accuracy = accuracy.eval(feed_dict)
-                img_t, labels_t = sess.run([img_batch_test, label_batch_test])
-                feed_dict = {x: img_t, y: labels_t, is_training: False}
-                test_accuracy = accuracy.eval(feed_dict)
+                # feed_dict = {x: img, y: labels, is_training: False}
+                train_accuracy = accuracy.eval(feed_dict(False))
+                # img_t, labels_t = sess.run([img_batch_test, label_batch_test])
+                # feed_dict = {x: img_t, y: labels_t, is_training: False}
+                test_accuracy = accuracy.eval(feed_dict(False))
                 print('step %d, training accuracy %g , validation accuracy %g' % (i, train_accuracy, test_accuracy))
-            sess.run(train_step, feed_dict={x: img, y: labels, is_training: True})
+            # sess.run(train_step, feed_dict={x: img, y: labels, is_training: True})
+            sess.run(train_step, feed_dict(True))
             # sess.run(list_add, feed_dict={x: img, is_training: True})
         coord.request_stop()
         coord.join(threads)
