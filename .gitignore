@@ -3,3 +3,4 @@ CNNforpaper/ResNet/traindata.tfrecords
 CNNforpaper/ResNet/testdata.tfrecords
 .idea/workspace.xml
 .idea/
+.idea
