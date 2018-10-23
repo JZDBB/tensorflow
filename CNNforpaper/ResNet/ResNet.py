@@ -118,7 +118,7 @@ def batch_norm(x, is_training):
     return tf.nn.batch_normalization(x, mean, variance, beta, gamma, 0.001, 'Batch_norm')
 
 
-def deep(x, is_training):
+def ResNet(x, is_training):
     # with tf.name_scope("reshape"):
     #     x_orig = tf.reshape(x, [-1, 32, 32, 3])
 
@@ -391,7 +391,7 @@ def main():
     y = tf.placeholder(tf.int32, [None], name='label')
     is_training = tf.placeholder(tf.bool)
 
-    y_pred = deep(x, is_training)
+    y_pred = ResNet(x, is_training)
 
     with tf.name_scope('weight_loss'):
         weights_norm = tf.reduce_sum(

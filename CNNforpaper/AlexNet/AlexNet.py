@@ -15,7 +15,7 @@ def bias_variable(x, shape):
 #     part2 = tf.reshape(output[1], shape)
 #     return part1, part2
 
-def deep(x):
+def AlexNet(x):
     with tf.name_scope("reshape1"):
         x_image = tf.reshape(x, [-1, 224, 224, 3])
 
@@ -140,7 +140,7 @@ def main():
     x = tf.placeholder(tf.float32, [None, 224*224*3], name='input_image')
     y = tf.placeholder(tf.int32, [None], name='label')
 
-    y_pred = deep(x)
+    y_pred = AlexNet(x)
 
     print(y.shape, y_pred.shape)
 
