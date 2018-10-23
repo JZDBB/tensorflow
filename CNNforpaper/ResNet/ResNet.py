@@ -447,7 +447,6 @@ def main():
             k = 1.0
         return {x: xs, y: ys, is_training: train}
 
-
     store_mean = tf.get_collection('store_mean')
     store_variance = tf.get_collection('store_variance')
     list_add = store_mean + store_variance

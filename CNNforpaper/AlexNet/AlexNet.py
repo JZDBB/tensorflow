@@ -8,12 +8,6 @@ def bias_variable(x, shape):
     initial = tf.constant(x, shape=shape)
     return tf.Variable(initial)
 
-# def split(x, size, shape):
-#     x_reshape = tf.reshape(x, [-1, size*2])
-#     output = tf.dynamic_partition(x_reshape, size+1, 2)
-#     part1 = tf.reshape(output[0], shape)
-#     part2 = tf.reshape(output[1], shape)
-#     return part1, part2
 
 def AlexNet(x):
     with tf.name_scope("reshape1"):
