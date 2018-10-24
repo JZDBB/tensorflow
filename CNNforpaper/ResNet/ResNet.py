@@ -427,14 +427,14 @@ def main():
         """Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
 
         def get_batch(data, labels):
-            id = np.random.randint(low=0, high=labels.shape[0], size=128, dtype=np.int32)
+            id = np.random.randint(low=0, high=labels.shape[0], size=8, dtype=np.int32)
             return data[id, ...], labels[id]
 
         if train:
             tmp, ys = get_batch(img_train, label_train)
             xs = tmp
             tmp = np.pad(tmp, 4, 'constant')
-            for ii in range(128):
+            for ii in range(8):
                 xx = np.random.randint(0, 9)
                 yy = np.random.randint(0, 9)
                 xs[ii, :] = np.fliplr(tmp[ii + 4, xx:xx + 32, yy:yy + 32, 4:7]) if np.random.randint(0, 2) == 1 \
@@ -451,20 +451,24 @@ def main():
     store_variance = tf.get_collection('store_variance')
     list_add = store_mean + store_variance
     list_add = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+
+    with tf.name_scope("saver"):
+        saver = tf.train.Saver(name="saver")
+
     with tf.Session() as sess:
         writer = tf.summary.FileWriter("./logs", sess.graph)
         writer.flush()
         writer.close()
 
-        sess.run(tf.global_variables_initializer())
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
+        if tf.gfile.Exists('checkpoint'):
+            saver.restore(sess, os.path.join('./Model/model.ckpt'))
+        else:
+            tf.global_variables_initializer().run()
+
+        # coord = tf.train.Coordinator()
+        # threads = tf.train.start_queue_runners(coord=coord)
         for i in range(64000):
-            # img, labels = sess.run([img_batch_train, label_batch_train])
-            # for i in range(128):
-            #     a = (img[i, :]*255+128).astype(np.uint8)
-            #     plt.imshow(a)
-            #     plt.show()
+
             if i % 100 == 0:
                 # feed_dict = {x: img, y: labels, is_training: False}
                 train_accuracy = accuracy.eval(feed_dict(False))
@@ -472,16 +476,18 @@ def main():
                 # feed_dict = {x: img_t, y: labels_t, is_training: False}
                 test_accuracy = accuracy.eval(feed_dict(False))
                 print('step %d, training accuracy %g , validation accuracy %g' % (i, train_accuracy, test_accuracy))
+                saver.save(sess, "./Model/model.ckpt")
             # sess.run(train_step, feed_dict={x: img, y: labels, is_training: True})
             sess.run(train_step, feed_dict(True))
             # sess.run(list_add, feed_dict={x: img, is_training: True})
-        coord.request_stop()
-        coord.join(threads)
+        # coord.request_stop()
+        # coord.join(threads)
 
-        img_batch_test, label_batch_test = tf.train.batch([img_test, label_test],
-                                                                  batch_size=10000, capacity=50000)
-        img_t, labels_t = sess.run([img_batch_test, label_batch_test])
-        print('test accuracy %g' % accuracy.eval(feed_dict={x: img_t, y: labels_t, is_training:False}))
+        # test
+        # img_batch_test, label_batch_test = tf.train.batch([img_test, label_test],
+        #                                                           batch_size=10000, capacity=50000)
+        # img_t, labels_t = sess.run([img_batch_test, label_batch_test])
+        # print('test accuracy %g' % accuracy.eval(feed_dict={x: img_t, y: labels_t, is_training:False}))
 
 if __name__ == "__main__":
     main()

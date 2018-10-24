@@ -115,8 +115,8 @@ def ZF_Net(x):
         h_fc2_drop = tf.nn.dropout(out_fc2, 0.5)
 
     with tf.name_scope("fc3"):
-        W_fc3 = weight_variable([4096, 1000])
-        b_fc3 = bias_variable(1., [1000])
+        W_fc3 = weight_variable([4096, 10])
+        b_fc3 = bias_variable(1., [10])
         out_fc3 = tf.nn.relu(tf.matmul(h_fc2_drop, W_fc3) + b_fc3)
 
     return out_fc3
@@ -144,7 +144,7 @@ def main():
         train_step = tf.train.MomentumOptimizer(lr, 0.9).minimize(cross_entropy)
 
     with tf.name_scope('accuracy'):
-        correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y, 1))
+        correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.cast(y, tf.int64))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
     with tf.Session() as sess:
@@ -154,7 +154,7 @@ def main():
         sess.run(tf.global_variables_initializer())
 
         def get_batch(data, labels):
-            id = np.random.randint(low=0, high=labels.shape[0], size=128, dtype=np.int32)
+            id = np.random.randint(low=0, high=labels.shape[0], size=8, dtype=np.int32)
             return data[id, ...], labels[id]
 
         for i in range(4000):
@@ -165,7 +165,7 @@ def main():
                 test_accuracy = accuracy.eval(feed_dict={x: x_valid, y: y_valid})
                 print('step %d, training accuracy %g , validation accuracy %g' % (i, train_accuracy, test_accuracy))
 
-            x_train, y_train = get_batch(img_train, label_train)
+            # x_train, y_train = get_batch(img_train, label_train)
             sess.run(train_step, feed_dict={x: x_train, y: y_train})
 
         saver.save(sess, "model.ckpt")

@@ -1,6 +1,7 @@
 CNNforpaper/ResNet/cifar-10-python/
 CNNforpaper/ResNet/traindata.tfrecords
 CNNforpaper/ResNet/testdata.tfrecords
+CNNforpaper/ResNet/Model/
 .idea/workspace.xml
 .idea/
 .idea
