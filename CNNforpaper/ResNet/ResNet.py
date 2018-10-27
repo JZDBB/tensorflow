@@ -51,7 +51,6 @@ def unpickle(file):
         dict = pickle.load(fo, encoding='bytes')
     return dict
 
-
 def load_train_data():
     data = np.ndarray(shape=(0, 32 * 32 * 3), dtype=np.float32)
     labels = np.ndarray(shape=0, dtype=np.int64)
@@ -62,7 +61,6 @@ def load_train_data():
         print('load training data: data_batch_{}'.format(i + 1))
     data = np.reshape(data, [-1, 32, 32, 3], 'F').transpose((0, 2, 1, 3))
     return data, labels
-
 
 def load_valid_data():
     tmp = unpickle(os.path.join("cifar-10-python", "test_batch"))
@@ -87,7 +85,6 @@ def weight_variable(shape, std):
 def bias_variable(x, shape):
     initial = tf.constant(x, shape=shape)
     return tf.Variable(initial)
-
 
 def batch_norm(x, is_training):
     # return tf.contrib.layers.batch_norm(x, is_training=is_training)
@@ -116,7 +113,6 @@ def batch_norm(x, is_training):
         lambda: (moving_mean, moving_variance))
 
     return tf.nn.batch_normalization(x, mean, variance, beta, gamma, 0.001, 'Batch_norm')
-
 
 def ResNet(x, is_training):
     # with tf.name_scope("reshape"):
