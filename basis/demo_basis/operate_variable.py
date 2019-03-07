@@ -3,12 +3,10 @@ import tensorflow as tf
 import os
 from tensorflow.python.framework import ops
 
-# The default path for saving event files is the same folder of this python file.
 tf.app.flags.DEFINE_string(
     'log_dir', os.path.dirname(os.path.abspath(__file__)) + '/logs',
     'Directory where event logs are written to.')
 
-# Store all elemnts in FLAG structure!
 FLAGS = tf.app.flags.FLAGS
 
 # The user is prompted to input an absolute path.

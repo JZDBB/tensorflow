@@ -9,3 +9,4 @@ CNNforpaper/ResNet/Model/
 CNNforpaper/ZF-net/cifar-10-python/
 CNNforpaper/ZF-net/traindata.tfrecords
 CNNforpaper/ZF-net/testdata.tfrecords
+basis/demo_basis/logs/
