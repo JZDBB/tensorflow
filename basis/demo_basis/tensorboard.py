@@ -115,7 +115,6 @@ def board3():
             sess.run(increment_op)  # 计数器+1
         summary_writer.close()
 
-
 if __name__ == '__main__':
     # board()
     # board2()
