@@ -7,13 +7,13 @@
 
 #### Tensorboard数据形式
 
-（1）标量Scalars 
-（2）图片Images 
-（3）音频Audio 
-（4）计算图Graph 
-（5）数据分布Distribution 
-（6）直方图Histograms 
-（7）嵌入向量Embeddings
+（1）标量Scalars： accuracy，cross entropy，dropout，layer1 和 layer2 的 bias 和 weights 等的趋势
+（2）图片Images：输入的数据
+（3）音频Audio：输入的数据
+（4）计算图Graph：模型的结构
+（5）数据分布Distribution：activations，gradients 或者 weights 等变量的每一步的分布
+（6）直方图Histograms： activations，gradients 或者 weights 等变量的每一步的分布
+（7）嵌入向量Embeddings： PCA 主成分分析方法将高维数据投影到 3D 空间后的数据的关系
 
 #### Tensorboard可视化
 
