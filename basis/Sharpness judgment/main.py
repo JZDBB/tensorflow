@@ -31,9 +31,9 @@ def load_data(filenames):
         datasets = pickle.load(f)
         random.shuffle(datasets)
         for dataset in datasets:
-            img = plt.imread(dataset[0])
-            x = random.randint(0, len(img.shape[0])-224)
-            y = random.randint(0, len(img.shape[1])-224)
+            img = plt.imread(os.path.join('./data', dataset[0]))
+            x = random.randint(0, img.shape[0]-224)
+            y = random.randint(0, img.shape[1]-224)
             img = img[x:x+224, y:y+224, :]
             img_arr = np.array(img)
             label = dataset[1]
@@ -52,10 +52,13 @@ def main(_):
         label_place = tf.placeholder(tf.float32, shape=([None, 1]), name='labels')
         dropout_param = tf.placeholder(tf.float32)
 
-        feat = net.resnet(image_place, 20)
-        pred = tf.contrib.layers.fully_connected(feat, 26, None,
+        Net = net.resnet(20)
+        feat = Net._build_net(image_place, Net.n)
+        pred = tf.contrib.layers.fully_connected(feat, 1, None,
                                                weights_regularizer=tf.contrib.layers.l2_regularizer(FLAGS.weight_decay))
-        loss = tf.losses.sparse_softmax_cross_entropy(tf.to_int64(label_place), pred)
+        loss = tf.multiply(tf.square(pred - label_place), 2)
+        train_step = tf.train.MomentumOptimizer(learning_rate, momentum=FLAGS.momentum).minimize(
+            loss, global_step=global_step)
 
         tf.summary.scalar("loss", loss, collections=['train', 'test'])
         tf.summary.scalar("learning_rate", learning_rate, collections=['train'])

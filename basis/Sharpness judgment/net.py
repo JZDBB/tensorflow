@@ -5,18 +5,18 @@ import math
 
 
 class resnet(object):
-    def __init__(self, input, num_layers):
-        n = 3
+    def __init__(self, num_layers):
+        self.n = 3
         if num_layers not in [20, 32, 50]:
             raise Exception('layers should be 20, 32 or 50')
         self.num_layers = num_layers
         if num_layers == 20:
-            n = 3
+            self.n = 3
         elif num_layers == 32:
-            n = 5
+            self.n = 5
         elif num_layers == 50:
-            n = 8
-        self._build_net(input, n)
+            self.n = 8
+        # self._build_net(input, n)
 
     def _block(self, inputs, num_outputs, weight_decay, scope, down_sample=False):
         with tf.variable_scope(scope):
@@ -64,3 +64,5 @@ class resnet(object):
                           biases_regularizer=layers.l2_regularizer(0.0001),
                           normalizer_fn=layers.batch_norm)
         self.predict = tf.reshape(h, [-1, 256])
+
+        return self.predict
