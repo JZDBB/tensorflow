@@ -18,5 +18,6 @@ with tf.Session() as sess:
     writer = tf.summary.FileWriter('./logs', sess.graph)
     writer.close()
     c = tf.get_default_graph().get_tensor_by_name(name='conv1/BiasAdd:0')
+    # c = tf.get_default_graph.get_operation_by_name(name='conv1/BiasAdd')
     print(sess.run(c, feed_dict={a:input}))
     d = 1

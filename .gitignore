@@ -10,3 +10,6 @@ CNNforpaper/ZF-net/cifar-10-python/
 CNNforpaper/ZF-net/traindata.tfrecords
 CNNforpaper/ZF-net/testdata.tfrecords
 basis/demo_basis/logs/
+basis/Sharpness judgment/.idea/
+basis/Sharpness judgment/img/
+basis/Sharpness judgment/data/
