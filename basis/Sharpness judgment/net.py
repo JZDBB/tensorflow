@@ -57,7 +57,7 @@ class resnet(object):
         h = self._block(h, 64, 0.0001, '64_block1', True)
         for i in range(2, n + 1):
             h = self._block(h, 64, 0.0001, '64_block{}'.format(i))
-        h = layers.conv2d(inputs=h, num_outputs=10, kernel_size=[8, 8], scope='fc1', padding='VALID',
+        h = layers.conv2d(inputs=h, num_outputs=256, kernel_size=[8, 8], scope='fc1', padding='VALID',
                           weights_initializer=tf.truncated_normal_initializer(
                               stddev=math.sqrt(2.0 / 64 / 10)),
                           weights_regularizer=layers.l2_regularizer(0.0001),
