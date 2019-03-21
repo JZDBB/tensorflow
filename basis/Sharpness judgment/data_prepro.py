@@ -67,7 +67,7 @@ for i in range(1, 257):
         if i in val_list:
             val.append(['%s_%s.jpg' % (i, j), label])
 
-writer= tf.python_io.TFRecordWriter("train.tfrecords")
+writer= tf.python_io.TFRecordWriter("val.tfrecords")
 for data in val:
     for i in range(20):
         img = plt.imread(os.path.join('./data', data[0]))
@@ -85,7 +85,7 @@ for data in val:
     print(data[0])
 writer.close()
 
-writer= tf.python_io.TFRecordWriter("train.tfrecords")
+writer= tf.python_io.TFRecordWriter("test.tfrecords")
 for data in test:
     for i in range(20):
         img = plt.imread(os.path.join('./data', data[0]))

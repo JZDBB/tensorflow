@@ -1,10 +1,9 @@
 import tensorflow as tf
 import numpy as np
-import pickle
-import matplotlib.pyplot as plt
-import random
+import read_tfrecords
 import net
 import os
+import input
 
 flags = tf.app.flags
 
@@ -17,6 +16,7 @@ flags.DEFINE_integer('decay_steps', 100, 'decay steps')
 flags.DEFINE_float('decay_rate', 0.95, 'decay rate')
 flags.DEFINE_float('momentum', 0.9, 'momentum')
 flags.DEFINE_integer('batch_size', 32, 'batch size')
+flags.DEFINE_integer('patch_size', 32, '')
 flags.DEFINE_float('dropout', 0.5, 'keep probability')
 flags.DEFINE_integer('max_steps', 6400, 'max steps')
 flags.DEFINE_integer('start_step', 1, 'start steps')
@@ -24,37 +24,17 @@ flags.DEFINE_integer('start_step', 1, 'start steps')
 FLAGS = flags.FLAGS
 
 
-def load_data_pickle(filenames):
-    data = []
-    labels = []
-    with open(filenames, 'rb') as f:
-        datasets = pickle.load(f)
-        random.shuffle(datasets)
-        for dataset in datasets:
-            img = dataset[0]
-            x = random.randint(0, img.shape[0]-32)
-            y = random.randint(0, img.shape[1]-32)
-            img = img[x:x+32, y:y+32, :]
-            img_arr = np.array(img)
-            label = dataset[1]
-            data.append(img_arr)
-            labels.append(label)
-    return [data, labels]
-
-def load_data(filenames):
-    data = []
-    labels = []
-    with open(filenames, 'rb') as f:
-        datasets = pickle.load(f)
-        random.shuffle(datasets)
-        for dataset in datasets:
-            data.append(dataset[0])
-            labels.append(dataset[1])
-    return [data, labels]
-
 def main(_):
 
-    # data = load_data(FLAGS.data_dir)
+    # img, label = read_tfrecords.read_and_decode("train.tfrecords")
+    train_example_batch, train_label_batch = input.input_pipeline(
+        tf.train.match_filenames_once(FLAGS.data_dir), FLAGS.batch_size,
+        FLAGS.patch_size)
+
+    valid_example_batch, valid_label_batch = input.input_pipeline(
+        tf.train.match_filenames_once(FLAGS.data_dir), FLAGS.batch_size,
+        FLAGS.patch_size)
+
     graph = tf.Graph()
     with graph.as_default():
         global_step = tf.Variable(FLAGS.start_step, name="global_step")
@@ -64,6 +44,10 @@ def main(_):
         label_place = tf.placeholder(tf.float32, shape=(None, 1), name='labels')
         dropout_param = tf.placeholder(tf.float32)
 
+        # img_batch, label_batch = tf.train.shuffle_batch([img, label],
+        #                                                 batch_size=FLAGS.batch_size, capacity=2000,
+        #                                                 min_after_dequeue=1000)
+
         Net = net.resnet(20)
         feat = Net._build_net(image_place, Net.n)
         pred = tf.contrib.layers.fully_connected(feat, 1, None,
@@ -72,36 +56,57 @@ def main(_):
         loss = tf.reduce_sum(tf.multiply(tf.square(pred - label_place), 1.0/FLAGS.batch_size))
         train_step = tf.train.MomentumOptimizer(learning_rate, momentum=FLAGS.momentum).minimize(
             loss, global_step=global_step)
-        tf.summary.scalar("loss", loss, collections=['train', 'test'])
+        tf.summary.scalar("loss", loss, collections=['train', 'test']) #
         tf.summary.scalar("learning_rate", learning_rate, collections=['train'])
-        merged = tf.summary.merge_all()
+        train = tf.summary.merge_all()
+
 
         with tf.Session() as sess:
             saver = tf.train.Saver(name="saver")
+
+            coord = tf.train.Coordinator()
+            # 使用start_queue_runners 启动队列填充
+            threads = tf.train.start_queue_runners(sess, coord)
             if tf.gfile.Exists(os.path.join(FLAGS.ckpt_dir, 'checkpoint')):
                 saver.restore(sess, os.path.join(FLAGS.ckpt_dir, 'model.ckpt'))
             else:
                 sess.run(tf.global_variables_initializer())
-
             writer = tf.summary.FileWriter(FLAGS.log_dir + '/logs', sess.graph)
             writer.flush()
 
+            def feed_dict(train, on_training):
+                def get_batch(data, labels):
+                    d, l = sess.run([data, labels])
+                    d = d.astype(np.float32)
+                    l = l.astype(np.float32)
+                    return d, l
+
+                if train:
+                    xs, ys = get_batch(train_example_batch, train_label_batch)
+                else:
+                    xs, ys = get_batch(valid_example_batch, valid_label_batch)
+                    pass
+                return {image_place: xs, label_place: ys}
+
             for epoch in range(FLAGS.max_steps):
-                data = load_data(FLAGS.data_dir)
-                image = np.array(data[0])
-                labels = np.reshape(np.array(data[1]), (-1, 1))
-                # print(labels.shape)
-                for i in range(int(len(data[0])/FLAGS.batch_size)):
-                    start_idx = i * FLAGS.batch_size
-                    end_idx = (i + 1) * FLAGS.batch_size
 
-                    train_batch_data, train_batch_label = image[start_idx:end_idx], labels[start_idx:end_idx]
-                    batch_loss, _ = sess.run([loss, train_step],
-                        feed_dict={image_place: train_batch_data,
-                                   label_place: train_batch_label})
+                for i in range(2000):
+                    try:
+                        while not coord.should_stop():
+                    # 获取训练用的每一个batch中batch_size个样本和标签
 
-                    # writer.add_summary(train_summaries, global_step=i)
-                    # print('Loss, '+"{:.3f}".format(batch_loss))
+                            # train_batch_data, train_batch_label = sess.run([img_batch, label_batch])
+                            #
+                            # image = np.reshape(np.array(train_batch_data), (-1, 32, 32, 3))
+                            # labels = np.reshape(np.array(train_batch_label), (-1, 1))
+
+                            batch_loss, _ = sess.run([loss, train_step],
+                                feed_dict=feed_dict(True, True))
+
+                            # writer.add_summary(train_summaries, global_step=i)
+                            print('Loss, '+"{:.3f}".format(batch_loss))
+                    except tf.errors.OutOfRangeError:  # num_epochs 次数用完会抛出此异常
+                        print("---Train end---")
 
                 print("Epoch #" + str(epoch + 1) + ", Train Loss=" + \
                        "{:.3f}".format(batch_loss))
@@ -110,7 +115,8 @@ def main(_):
                     save_path = saver.save(sess, FLAGS.ckpt_dir)
                     print("Model saved in file: %s" % save_path)
 
-
+        coord.request_stop()
+        coord.join(threads)
 
 
 if __name__ == '__main__':
