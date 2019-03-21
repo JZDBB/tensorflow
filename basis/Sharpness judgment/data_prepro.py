@@ -1,5 +1,5 @@
 import os
-import cv2
+import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
@@ -51,8 +51,6 @@ res = remove(x, val_list)
 test_list = random.sample(res, int(len/8))
 train_list = remove(res, test_list)
 
-
-
 train = []
 test = []
 val = []
@@ -69,45 +67,56 @@ for i in range(1, 257):
         if i in val_list:
             val.append(['%s_%s.jpg' % (i, j), label])
 
-with open('val_data.pickle', 'wb') as f:
-    list_data = []
-    for data in val:
-        for i in range(5):
-            img = plt.imread(os.path.join('./data', data[0]))
-            x = random.randint(0, img.shape[0] - 32)
-            y = random.randint(0, img.shape[1] - 32)
-            img = img[x:x + 32, y:y + 32, :]
-            img_arr = np.array(img)
-            label = data[1]
-            list_data.append([img_arr, data[1]])
-        print(data[0])
-    pickle.dump(list_data, f)
+writer= tf.python_io.TFRecordWriter("train.tfrecords")
+for data in val:
+    for i in range(20):
+        img = plt.imread(os.path.join('./data', data[0]))
+        x = random.randint(0, img.shape[0] - 32)
+        y = random.randint(0, img.shape[1] - 32)
+        img = img[x:x + 32, y:y + 32, :]
+        img_arr = np.array(img)
+        img_raw = img_arr.tobytes()
+        label = data[1]
+        example = tf.train.Example(features=tf.train.Features(feature={
+            "label": tf.train.Feature(int64_list=tf.train.Int64List(value=[data[1]])),
+            'img_raw': tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
+        }))  # example对象对label和image数据进行封装
+        writer.write(example.SerializeToString())  # 序列化为字符串
+    print(data[0])
+writer.close()
 
-with open('test_data.pickle', 'wb') as f:
-    list_data = []
-    for data in test:
-        for i in range(5):
-            img = plt.imread(os.path.join('./data', data[0]))
-            x = random.randint(0, img.shape[0] - 32)
-            y = random.randint(0, img.shape[1] - 32)
-            img = img[x:x + 32, y:y + 32, :]
-            img_arr = np.array(img)
-            label = data[1]
-            list_data.append([img_arr, data[1]])
-        print(data[0])
-    pickle.dump(list_data, f)
+writer= tf.python_io.TFRecordWriter("train.tfrecords")
+for data in test:
+    for i in range(20):
+        img = plt.imread(os.path.join('./data', data[0]))
+        x = random.randint(0, img.shape[0] - 32)
+        y = random.randint(0, img.shape[1] - 32)
+        img = img[x:x + 32, y:y + 32, :]
+        img_arr = np.array(img)
+        img_raw = img_arr.tobytes()
+        label = data[1]
+        example = tf.train.Example(features=tf.train.Features(feature={
+            "label": tf.train.Feature(int64_list=tf.train.Int64List(value=[data[1]])),
+            'img_raw': tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
+        }))  # example对象对label和image数据进行封装
+        writer.write(example.SerializeToString())  # 序列化为字符串
+    print(data[0])
+writer.close()
 
-with open('train_data.pickle', 'wb') as f:
-    list_data = []
-    for data in train:
-        for i in range(5):
-            img = plt.imread(os.path.join('./data', data[0]))
-            x = random.randint(0, img.shape[0] - 32)
-            y = random.randint(0, img.shape[1] - 32)
-            img = img[x:x + 32, y:y + 32, :]
-            img_arr = np.array(img)
-            label = data[1]
-            list_data.append([img_arr, data[1]])
-        print(data[0])
-    pickle.dump(list_data, f)
-
+writer= tf.python_io.TFRecordWriter("train.tfrecords")
+for data in train:
+    for i in range(20):
+        img = plt.imread(os.path.join('./data', data[0]))
+        x = random.randint(0, img.shape[0] - 32)
+        y = random.randint(0, img.shape[1] - 32)
+        img = img[x:x + 32, y:y + 32, :]
+        img_arr = np.array(img)
+        img_raw = img_arr.tobytes()
+        label = data[1]
+        example = tf.train.Example(features=tf.train.Features(feature={
+            "label": tf.train.Feature(int64_list=tf.train.Int64List(value=[data[1]])),
+            'img_raw': tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
+        }))  # example对象对label和image数据进行封装
+        writer.write(example.SerializeToString())  # 序列化为字符串
+    print(data[0])
+writer.close()
