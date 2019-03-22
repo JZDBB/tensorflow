@@ -10,7 +10,7 @@ def read_from_tfrecord(tfrecord_file_queue, patch_size):
             'patch_raw': tf.FixedLenFeature([], tf.string)
         }, name='features')
     image = tf.decode_raw(tfrecord_features['patch_raw'], tf.uint8)
-    ground_truth = tf.decode_raw(tfrecord_features['label'], tf.int32)
+    ground_truth = tf.decode_raw(tfrecord_features['label'], tf.float32)
 
     image = tf.cast(tf.reshape(image, [patch_size, patch_size, 3]), tf.float32)
     image = tf.image.per_image_standardization(image)
@@ -20,7 +20,7 @@ def read_from_tfrecord(tfrecord_file_queue, patch_size):
 
 def input_pipeline(filenames, batch_size, patch_size, read_threads=2, num_epochs=None):
     filename_queue = tf.train.string_input_producer(
-      filenames, num_epochs=num_epochs, shuffle=True)
+      filenames, num_epochs=None, shuffle=True)
     example_list = [read_from_tfrecord(filename_queue, patch_size)
                   for _ in range(read_threads)]
     min_after_dequeue = 10000

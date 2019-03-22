@@ -8,7 +8,7 @@ import input
 flags = tf.app.flags
 
 flags.DEFINE_float('learning_rate', 0.1, 'learning rate')
-flags.DEFINE_string('data_dir', 'train_data.pickle', 'data direction')
+flags.DEFINE_string('data_dir', '/home/yqi/Desktop/yn/tensorflow/basis/Sharpness judgment/train.tfrecords', 'data direction')
 flags.DEFINE_string('log_dir', './logs', 'log direction')
 flags.DEFINE_string('ckpt_dir', './models', 'check point direction')
 flags.DEFINE_float('weight_decay', 0.0001, 'weight decay')
@@ -26,17 +26,18 @@ FLAGS = flags.FLAGS
 
 def main(_):
 
-    # img, label = read_tfrecords.read_and_decode("train.tfrecords")
-    train_example_batch, train_label_batch = input.input_pipeline(
-        tf.train.match_filenames_once(FLAGS.data_dir), FLAGS.batch_size,
-        FLAGS.patch_size)
-
-    valid_example_batch, valid_label_batch = input.input_pipeline(
-        tf.train.match_filenames_once(FLAGS.data_dir), FLAGS.batch_size,
-        FLAGS.patch_size)
-
     graph = tf.Graph()
     with graph.as_default():
+
+        # img, label = read_tfrecords.read_and_decode("train.tfrecords")
+        train_example_batch, train_label_batch = input.input_pipeline(
+            tf.train.match_filenames_once(FLAGS.data_dir), FLAGS.batch_size,
+            FLAGS.patch_size)
+
+        valid_example_batch, valid_label_batch = input.input_pipeline(
+            tf.train.match_filenames_once(FLAGS.data_dir), FLAGS.batch_size,
+            FLAGS.patch_size)
+
         global_step = tf.Variable(FLAGS.start_step, name="global_step")
         learning_rate = tf.train.piecewise_constant(global_step, [3200, 4800], [0.1, 0.01, 0.001])
 
@@ -63,17 +64,17 @@ def main(_):
 
         with tf.Session() as sess:
             saver = tf.train.Saver(name="saver")
-
-            coord = tf.train.Coordinator()
-            # 使用start_queue_runners 启动队列填充
-            threads = tf.train.start_queue_runners(sess, coord)
             if tf.gfile.Exists(os.path.join(FLAGS.ckpt_dir, 'checkpoint')):
                 saver.restore(sess, os.path.join(FLAGS.ckpt_dir, 'model.ckpt'))
             else:
                 sess.run(tf.global_variables_initializer())
             writer = tf.summary.FileWriter(FLAGS.log_dir + '/logs', sess.graph)
             writer.flush()
+            sess.run(tf.local_variables_initializer())
 
+            coord = tf.train.Coordinator()
+            # 使用start_queue_runners 启动队列填充
+            threads = tf.train.start_queue_runners(sess, coord)
             def feed_dict(train, on_training):
                 def get_batch(data, labels):
                     d, l = sess.run([data, labels])
@@ -91,22 +92,11 @@ def main(_):
             for epoch in range(FLAGS.max_steps):
 
                 for i in range(2000):
-                    try:
-                        while not coord.should_stop():
-                    # 获取训练用的每一个batch中batch_size个样本和标签
-
-                            # train_batch_data, train_batch_label = sess.run([img_batch, label_batch])
-                            #
-                            # image = np.reshape(np.array(train_batch_data), (-1, 32, 32, 3))
-                            # labels = np.reshape(np.array(train_batch_label), (-1, 1))
-
-                            batch_loss, _ = sess.run([loss, train_step],
+                    batch_loss, _ = sess.run([loss, train_step],
                                 feed_dict=feed_dict(True, True))
 
                             # writer.add_summary(train_summaries, global_step=i)
-                            print('Loss, '+"{:.3f}".format(batch_loss))
-                    except tf.errors.OutOfRangeError:  # num_epochs 次数用完会抛出此异常
-                        print("---Train end---")
+                    print('Loss, '+"{:.3f}".format(batch_loss))
 
                 print("Epoch #" + str(epoch + 1) + ", Train Loss=" + \
                        "{:.3f}".format(batch_loss))
