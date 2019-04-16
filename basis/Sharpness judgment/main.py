@@ -16,7 +16,7 @@ flags.DEFINE_integer('decay_steps', 100, 'decay steps')
 flags.DEFINE_float('decay_rate', 0.95, 'decay rate')
 flags.DEFINE_float('momentum', 0.9, 'momentum')
 flags.DEFINE_integer('batch_size', 32, 'batch size')
-flags.DEFINE_integer('patch_size', 32, '')
+flags.DEFINE_integer('patch_size', 128, '')
 flags.DEFINE_float('dropout', 0.5, 'keep probability')
 flags.DEFINE_integer('max_steps', 6400, 'max steps')
 flags.DEFINE_integer('start_step', 1, 'start steps')
@@ -32,7 +32,7 @@ def main(_):
         # img, label = read_tfrecords.read_and_decode("train.tfrecords")
         train_example_batch, train_label_batch = input.input_pipeline(
             tf.train.match_filenames_once(FLAGS.data_dir), FLAGS.batch_size,
-            FLAGS.patch_size)
+            FLAGS.patch_size)# match_filenames_once 是一个local variables 需要初始化。
 
         valid_example_batch, valid_label_batch = input.input_pipeline(
             tf.train.match_filenames_once(FLAGS.data_dir), FLAGS.batch_size,
@@ -41,7 +41,7 @@ def main(_):
         global_step = tf.Variable(FLAGS.start_step, name="global_step")
         learning_rate = tf.train.piecewise_constant(global_step, [3200, 4800], [0.1, 0.01, 0.001])
 
-        image_place = tf.placeholder(tf.float32, shape=(None, 32, 32, 3), name='image')
+        image_place = tf.placeholder(tf.float32, shape=(None, 128, 128, 3), name='image')
         label_place = tf.placeholder(tf.float32, shape=(None, 1), name='labels')
         dropout_param = tf.placeholder(tf.float32)
 

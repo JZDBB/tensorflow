@@ -42,13 +42,13 @@ class resnet(object):
 
     def _build_net(self, x, n):
         with tf.variable_scope('pre'):
-            pre = layers.conv2d(inputs=x, num_outputs=16, kernel_size=[3, 3], scope='conv',
+            pre = layers.conv2d(inputs=x, num_outputs=16, stride=2, kernel_size=[7, 7], scope='conv',
                                 weights_initializer=tf.truncated_normal_initializer(
                                     stddev=math.sqrt(2.0 / 9.0 / 3)),
                                 weights_regularizer=layers.l2_regularizer(0.0001),
                                 biases_regularizer=layers.l2_regularizer(0.0001),
                                 normalizer_fn=layers.batch_norm)
-        h = pre
+        h = layers.max_pool2d(pre, kernel_size=[3, 3], stride=2, padding='VALID')
         for i in range(1, n + 1):
             h = self._block(h, 16, 0.0001, '16_block{}'.format(i))
         h = self._block(h, 32, 0.0001, '32_block1', True)
@@ -57,7 +57,7 @@ class resnet(object):
         h = self._block(h, 64, 0.0001, '64_block1', True)
         for i in range(2, n + 1):
             h = self._block(h, 64, 0.0001, '64_block{}'.format(i))
-        h = layers.conv2d(inputs=h, num_outputs=256, kernel_size=[8, 8], scope='fc1', padding='VALID',
+        h = layers.conv2d(inputs=h, num_outputs=256, stride=2, kernel_size=[8, 8], scope='fc1', padding='VALID',
                           weights_initializer=tf.truncated_normal_initializer(
                               stddev=math.sqrt(2.0 / 64 / 10)),
                           weights_regularizer=layers.l2_regularizer(0.0001),

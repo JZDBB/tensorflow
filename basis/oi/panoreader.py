@@ -1,3 +1,7 @@
+"""
+A demo to read tfrecords in Tensorflow-1.3 to the latest.
+"""
+
 import tensorflow as tf
 import os
 import cv2
@@ -33,6 +37,8 @@ class PANOReader(tfrecordsreader.TFRecordsReader):
                                                     name='features')
         image = tfrecord_features['data']
         label = tfrecord_features['label']
+
+        # data preprocess
         label = label - 1
         image = (image + 1) * 128
         image = tf.expand_dims(image, 2)

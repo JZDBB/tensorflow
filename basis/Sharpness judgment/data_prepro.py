@@ -59,7 +59,7 @@ train = []
 test = []
 val = []
 for i in range(1, 257):
-    for j in range(0, 10):
+    for j in range(1, 10):
         if j == 0:
             label = 100
         else:
@@ -71,42 +71,42 @@ for i in range(1, 257):
         if i in val_list:
             val.append(['%s_%s.jpg' % (i, j), label])
 
-writer= tf.python_io.TFRecordWriter("val.tfrecords")
-for data in val:
-    for i in range(200):
-        img = plt.imread(os.path.join('./data', data[0]))
-        x = random.randint(0, img.shape[0] - 128)
-        y = random.randint(0, img.shape[1] - 128)
-        img = img[x:x + 128, y:y + 128, :]
-        patch_raw = img.tostring()
-        label_raw = np.array([data[1]]).astype(np.float32).tostring()
-        example = tf.train.Example(features=tf.train.Features(feature={
-            'patch_raw': _bytes_feature(patch_raw),
-            'label': _bytes_feature(label_raw)}))
-        writer.write(example.SerializeToString())
-    print(data[0])
-writer.close()
-
-writer= tf.python_io.TFRecordWriter("test.tfrecords")
-for data in test:
-    for i in range(200):
-        img = plt.imread(os.path.join('./data', data[0]))
-        x = random.randint(0, img.shape[0] - 128)
-        y = random.randint(0, img.shape[1] - 128)
-        img = img[x:x + 128, y:y + 128, :]
-        patch_raw = img.tostring()
-        label_raw = np.array([data[1]]).astype(np.float32).tostring()
-        example = tf.train.Example(features=tf.train.Features(feature={
-            'patch_raw': _bytes_feature(patch_raw),
-            'label': _bytes_feature(label_raw)}))
-        writer.write(example.SerializeToString())
-    print(data[0])
-writer.close()
-
+# writer= tf.python_io.TFRecordWriter("val.tfrecords")
+# for data in val:
+#     for i in range(2):
+#         img = plt.imread(os.path.join('./data', data[0]))
+#         x = random.randint(0, img.shape[0] - 128)
+#         y = random.randint(0, img.shape[1] - 128)
+#         img = img[x:x + 128, y:y + 128, :]
+#         patch_raw = img.tostring()
+#         label_raw = np.array([data[1]]).astype(np.float32).tostring()
+#         example = tf.train.Example(features=tf.train.Features(feature={
+#             'patch_raw': _bytes_feature(patch_raw),
+#             'label': _bytes_feature(label_raw)}))
+#         writer.write(example.SerializeToString())
+#     print(data[0])
+# writer.close()
+#
+# writer= tf.python_io.TFRecordWriter("test.tfrecords")
+# for data in test:
+#     for i in range(2):
+#         img = plt.imread(os.path.join('./data', data[0]))
+#         x = random.randint(0, img.shape[0] - 128)
+#         y = random.randint(0, img.shape[1] - 128)
+#         img = img[x:x + 128, y:y + 128, :]
+#         patch_raw = img.tostring()
+#         label_raw = np.array([data[1]]).astype(np.float32).tostring()
+#         example = tf.train.Example(features=tf.train.Features(feature={
+#             'patch_raw': _bytes_feature(patch_raw),
+#             'label': _bytes_feature(label_raw)}))
+#         writer.write(example.SerializeToString())
+#     print(data[0])
+# writer.close()
+#
 
 writer= tf.python_io.TFRecordWriter("train.tfrecords")
 for data in train:
-    for i in range(200):
+    for i in range(2):
         img = plt.imread(os.path.join('./data', data[0]))
         x = random.randint(0, img.shape[0] - 128)
         y = random.randint(0, img.shape[1] - 128)
