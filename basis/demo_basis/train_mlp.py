@@ -156,8 +156,7 @@ with graph.as_default():
                 # # Write the specific summaries for training phase.
                 # train_summary_writer.add_summary(train_image_summary, global_step=training_step)
 
-            print("Epoch #" + str(epoch + 1) + ", Train Loss=" + \
-                  "{:.3f}".format(batch_loss))
+            print("Epoch #" + str(epoch + 1) + ", Train Loss=" + "{:.3f}".format(batch_loss))
 
             if FLAGS.online_test:
                 # WARNING: In this evaluation the whole test data is fed. In case the test data is huge this implementation
